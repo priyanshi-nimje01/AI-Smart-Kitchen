@@ -1,0 +1,14 @@
+import { useEffect,useState } from 'react';
+import api from '../api';
+const blank={name:'',quantity:1,unit:'pcs',expiryDate:''};
+export default function Pantry(){
+ const [items,setItems]=useState([]),[form,setForm]=useState(blank),[editing,setEditing]=useState(null),[error,setError]=useState('');
+ const load=()=>api.get('/pantry').then(r=>setItems(r.data)).catch(()=>setError('Cannot connect to server. Start the backend and check MongoDB.'));
+ useEffect(()=>{load();},[]);
+ const submit=async e=>{e.preventDefault();try{const data={...form,quantity:Number(form.quantity),expiryDate:form.expiryDate||null};if(editing)await api.put('/pantry/'+editing,data);else await api.post('/pantry',data);setForm(blank);setEditing(null);load();}catch(e){alert(e.response?.data?.message||'Could not save ingredient');}};
+ const edit=x=>{setEditing(x._id);setForm({...x,expiryDate:x.expiryDate?x.expiryDate.slice(0,10):''});};
+ const del=async id=>{if(confirm('Delete this ingredient?')){await api.delete('/pantry/'+id);load();}};
+ return <><div className="page-intro"><p className="eyebrow">KNOW WHAT YOU HAVE</p><h1>My pantry<span>.</span></h1><p>Track your ingredients and make every item count.</p></div>{error&&<p className="error">{error}</p>}
+ <div className="pantry-layout"><form className="form-card pantry-form" onSubmit={submit}><h2>{editing?'Update ingredient':'Add ingredient'}</h2><label>Ingredient name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="e.g. Tomatoes"/></label><div className="form-row"><label>Quantity<input type="number" min="0" value={form.quantity} onChange={e=>setForm({...form,quantity:e.target.value})}/></label><label>Unit<input value={form.unit} onChange={e=>setForm({...form,unit:e.target.value})} placeholder="pcs, kg, g"/></label></div><label>Expiry date<input type="date" value={form.expiryDate} onChange={e=>setForm({...form,expiryDate:e.target.value})}/></label><div className="actions"><button className="primary">{editing?'Update':'Add to pantry'}</button>{editing&&<button type="button" className="secondary" onClick={()=>{setEditing(null);setForm(blank);}}>Cancel</button>}</div></form>
+ <div className="pantry-list"><div className="section-head"><h2>Available ingredients <span className="count">{items.length}</span></h2></div>{items.map(x=><div className="pantry-item" key={x._id}><span className="ingredient-icon">🥬</span><div className="ingredient-info"><strong>{x.name}</strong><small>{x.quantity} {x.unit}{x.expiryDate?' · Expires '+new Date(x.expiryDate).toLocaleDateString():''}</small></div><button className="text-btn" onClick={()=>edit(x)}>Edit</button><button className="text-btn danger" onClick={()=>del(x._id)}>Delete</button></div>)}{!items.length&&<div className="empty"><span>🧺</span><p>Your pantry is empty. Add ingredients!</p></div>}</div></div></>;
+}

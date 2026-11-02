@@ -1,0 +1,9 @@
+import { useEffect,useState } from 'react';
+import api from '../api';
+export default function Suggestions(){
+ const [recipes,setRecipes]=useState([]),[pantry,setPantry]=useState([]),[error,setError]=useState('');
+ useEffect(()=>{Promise.all([api.get('/recipes'),api.get('/pantry')]).then(([r,p])=>{setRecipes(r.data);setPantry(p.data);}).catch(()=>setError('Cannot connect to server. Start the backend and check MongoDB.'));},[]);
+ const available=new Set(pantry.map(x=>x.name.toLowerCase().trim()));
+ const ranked=recipes.map(r=>{const ingredients=r.ingredients||[];const matched=ingredients.filter(x=>available.has(x.toLowerCase().trim()));return {...r,matched,score:ingredients.length?matched.length/ingredients.length:0};}).sort((a,b)=>b.score-a.score);
+ return <><div className="page-intro"><p className="eyebrow">LESS WASTE · MORE TASTE</p><h1>Smart suggestions<span>.</span></h1><p>Meal ideas based on ingredients already in your pantry.</p></div>{error&&<p className="error">{error}</p>}<div className="tip-banner"><span>💡</span><div><strong>How it works</strong><p>We compare recipe ingredients with your pantry and rank recipes by how many ingredients you already have.</p></div></div><div className="suggestion-list">{ranked.map(r=><article className="suggestion-card" key={r._id}><div className="suggestion-score">{Math.round(r.score*100)}<small>% match</small></div><div className="suggestion-info"><span className="eyebrow">{r.category} · {r.prepTime} MIN</span><h3>{r.name}</h3><p><strong>Available:</strong> {r.matched.join(', ')||'No matching ingredients yet'}</p><p><strong>Still needed:</strong> {r.ingredients.filter(x=>!r.matched.includes(x)).join(', ')||'You have everything!'}</p></div></article>)}</div>{!ranked.length&&!error&&<div className="empty"><span>✨</span><p>Add recipes and pantry ingredients to get smart suggestions.</p></div>}</>;
+}
